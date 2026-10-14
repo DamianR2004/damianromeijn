@@ -1,0 +1,58 @@
+---
+const lang = Astro.currentLocale || 'nl';
+const prefix = lang === 'en' ? '/en' : '';
+
+const t = {
+  nl: {
+    home: 'damian romeijn',
+    design: 'Design & Code',
+    products: 'Producten',
+    about: 'Over mij',
+    contact: 'Contact',
+  },
+  en: {
+    home: 'damian romeijn',
+    design: 'Design & Code',
+    products: 'Products',
+    about: 'About',
+    contact: 'Contact',
+  },
+};
+
+const text = t[lang];
+---
+
+<header>
+  <nav>
+    <a href={`${prefix}/`}>{text.home}</a>
+    <a href={`${prefix}/design-and-code`}>{text.design}</a>
+    <a href={`${prefix}/products`}>{text.products}</a>
+    <a href={`${prefix}/about`}>{text.about}</a>
+    <a href={`${prefix}/contact`}>{text.contact}</a>
+  </nav>
+</header>
+
+<style>
+  header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 2rem 0;
+  }
+
+  header > nav {
+    display: flex;
+    gap: 2rem;
+  }
+
+  header a {
+    color: var(--color-text, #fff);
+    text-decoration: none;
+    font-family: var(--font-unbounded), sans-serif;
+    font-size: 0.9rem;
+  }
+
+  header a:hover {
+    opacity: 0.7;
+  }
+</style>

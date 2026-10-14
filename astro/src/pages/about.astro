@@ -1,0 +1,62 @@
+---
+// src/pages/about.astro
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Over mij - Damian Romeijn">
+  <main>
+    <section>
+      <h1>Over mij</h1>
+      <p>
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Similique iusto explicabo atque totam, illum qui, delectus mollitia officia saepe earum architecto minima culpa sunt tempora ipsam, voluptates placeat obcaecati provident.
+      </p>
+      <img src="" alt="Portret van Damian" />
+    </section>
+
+    <section>
+      <h2>Opleidingen</h2>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Naam</th>
+            <th scope="col">School</th>
+            <th scope="col">Jaar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">AD, Frontend Design & Development</th>
+            <td>Hogeschool van Amsterdam</td>
+            <td>2023-2025</td>
+          </tr>
+          <tr>
+            <th scope="row">BSc, Communication and Multimedia Design</th>
+            <td>Hogeschool van Amsterdam</td>
+            <td>2025-2028</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Tech stack</h2>
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">Frontend:</th>
+            <td>HTML, CSS, JS, Astro, SvelteKit, Directus, Sanity</td>
+          </tr>
+          <tr>
+            <th scope="row">Producten:</th>
+            <td>Figma, TouchDesigner, Blender, Fusion360, Arduino</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <a href="/cv.pdf" target="_blank">Bekijk mijn CV</a>
+    </section>
+  </main>
+</Layout>
+
