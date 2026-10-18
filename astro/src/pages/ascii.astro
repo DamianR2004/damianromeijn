@@ -1,0 +1,246 @@
+---
+---
+
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D ASCII Viewer</title>
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #C14C23;
+        overflow: hidden;
+        font-family: monospace;
+      }
+      #canvas-container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        touch-action: none;
+      }
+      /* Meer ademruimte tussen de letters zodat het geen massief blok wordt */
+      #canvas-container table {
+        font-family: monospace !important;
+        line-height: 1.1em;
+        letter-spacing: 1px;
+      }
+      #ui-layer {
+        position: absolute;
+        bottom: 50px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        display: flex;
+        gap: 15px;
+        max-width: 90vw;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 5px 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.4s ease;
+      }
+      #ui-layer.ready {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .hover-btn {
+        padding: 10px 18px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid white;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .hover-btn:hover,
+      .hover-btn:active {
+        background: white;
+        color: #C14C23;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ui-layer">
+      <div class="hover-btn" data-target="hoofd">Mijn Hoofd</div>
+      <div class="hover-btn" data-target="imac">iMac</div>
+      <div class="hover-btn" data-target="model3">Model 3</div>
+      <div class="hover-btn" data-target="model4">Model 4</div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+      import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js';
+
+      const container = document.getElementById('canvas-container');
+      const uiLayer = document.getElementById('ui-layer');
+
+      if (container) {
+        const isMobile = window.innerWidth < 768;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0, 0, 0);
+
+        const fov = isMobile ? 60 : 45;
+        const camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0, 0, isMobile ? 4.2 : 4);
+
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Terug naar een goede balans qua resolutie en reeks
+        const effect = new AsciiEffect(renderer, '    .:-+*=%@#', {
+          invert: true,
+          resolution: isMobile ? 0.24 : 0.20
+        });
+        effect.setSize(window.innerWidth, window.innerHeight);
+
+        effect.domElement.style.color = '#ffffff';
+        effect.domElement.style.backgroundColor = '#C14C23';
+        effect.domElement.style.cursor = 'default';
+        effect.domElement.style.display = 'flex';
+        effect.domElement.style.alignItems = 'center';
+        effect.domElement.style.justifyContent = 'center';
+
+        const innerTable = effect.domElement.querySelector('table');
+        if (innerTable) {
+          innerTable.style.backgroundColor = 'transparent';
+          innerTable.style.margin = 'auto';
+        }
+
+        container.appendChild(effect.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const light1 = new THREE.PointLight(0xffffff, 3.2, 0, 0);
+        light1.position.set(400, 250, 120);
+        scene.add(light1);
+
+        const light2 = new THREE.PointLight(0xffffff, 0.35, 0, 0);
+        light2.position.set(-400, -150, -250);
+        scene.add(light2);
+
+        const flatMaterial = new THREE.MeshPhongMaterial({
+          color: 0xffffff,
+          specular: 0x050505,
+          shininess: 15,
+          flatShading: true,
+          side: THREE.DoubleSide
+        });
+
+        const clock = new THREE.Clock();
+        const loadedModels = {};
+        let activeModelKey = 'hoofd';
+
+        const manager = new THREE.LoadingManager();
+        manager.onLoad = function () {
+          if (uiLayer) uiLayer.classList.add('ready');
+
+          if (loadedModels['hoofd']) {
+            loadedModels['hoofd'].visible = true;
+          }
+        };
+
+        const loader = new GLTFLoader(manager);
+
+        function loadModel(key, path, scaleFactor, offsetY = 0) {
+          loader.load(
+            path,
+            function (gltf) {
+              const mesh = gltf.scene;
+
+              mesh.traverse(function (child) {
+                if (child.isMesh) {
+                  child.material = flatMaterial;
+                }
+              });
+
+              const wrapper = new THREE.Group();
+
+              const box = new THREE.Box3().setFromObject(mesh);
+              const size = box.getSize(new THREE.Vector3());
+              const maxDim = Math.max(size.x, size.y, size.z);
+              mesh.scale.setScalar(scaleFactor / maxDim);
+              mesh.updateMatrixWorld(true);
+
+              const scaledBox = new THREE.Box3().setFromObject(mesh);
+              const center = scaledBox.getCenter(new THREE.Vector3());
+              mesh.position.sub(center);
+
+              mesh.position.y += offsetY;
+
+              wrapper.add(mesh);
+              wrapper.visible = false;
+              loadedModels[key] = wrapper;
+              scene.add(wrapper);
+            },
+            undefined,
+            function (error) {
+              console.error(error);
+            }
+          );
+        }
+
+        loadModel('hoofd', '/models/damian.glb', 2, 0.1);
+        loadModel('imac', '/models/comp.glb', 2.4, 0.15);
+        loadModel('model3', '/models/producten.glb', 1.8, 0.1);
+        loadModel('model4', '/models/duif.glb', 2.3, 0.05);
+
+        const buttons = document.querySelectorAll('.hover-btn');
+        buttons.forEach(function (btn) {
+          ['pointerdown', 'mouseenter'].forEach(function (eventType) {
+            btn.addEventListener(eventType, function (e) {
+              const targetKey = e.currentTarget.getAttribute('data-target');
+
+              Object.values(loadedModels).forEach(function (m) {
+                m.visible = false;
+              });
+
+              if (loadedModels[targetKey]) {
+                loadedModels[targetKey].visible = true;
+                activeModelKey = targetKey;
+              }
+            });
+          });
+        });
+
+        function animate() {
+          requestAnimationFrame(animate);
+          const elapsed = clock.getElapsedTime();
+
+          if (loadedModels[activeModelKey] && loadedModels[activeModelKey].visible) {
+            loadedModels[activeModelKey].rotation.y = elapsed / 3;
+          }
+
+          effect.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', function () {
+          const mobileNow = window.innerWidth < 768;
+          camera.fov = mobileNow ? 60 : 45;
+          camera.position.z = mobileNow ? 4.2 : 4;
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          effect.setSize(window.innerWidth, window.innerHeight);
+        });
+      }
+    </script>
+  </body>
+</html>
