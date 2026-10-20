@@ -1,0 +1,197 @@
+---
+interface Props {
+  modelPath: string;
+  scaleFactor?: number;
+  offsetY?: number;
+}
+
+const {
+  modelPath,
+  scaleFactor = 2.0,
+  offsetY = 0.1,
+} = Astro.props;
+---
+
+<div 
+  class="ascii-wrapper"
+  data-model={modelPath}
+  data-scale={scaleFactor}
+  data-offset={offsetY}
+>
+  <div class="canvas-target"></div>
+</div>
+
+<style>
+  .ascii-wrapper {
+    /* Fixed en inset: 0 pakt precies het scherm zónder de scrollbalk */
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--z-canvas-bg, -1);
+    pointer-events: none;
+    background-color: var(--color-bg);
+  }
+
+  .canvas-target {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* 
+   * We overschrijven ALLEEN de padding/margin/borders van je reset, 
+   * en laten de font/letter-spacing over aan het script van Three.js!
+   */
+  .canvas-target :global(table) {
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    margin: 0 !important;
+    background-color: transparent !important;
+  }
+  
+  .canvas-target :global(td) {
+    padding: 0 !important;
+    border: none !important;
+  }
+</style>
+
+<script>
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+  import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js';
+
+  function initAsciiScenes() {
+    const wrappers = document.querySelectorAll<HTMLElement>('.ascii-wrapper');
+
+    wrappers.forEach((wrapper) => {
+      if (wrapper.dataset.initialized === 'true') return;
+      wrapper.dataset.initialized = 'true';
+
+      const target = wrapper.querySelector<HTMLElement>('.canvas-target');
+      if (!target) return;
+
+      const modelPath = wrapper.dataset.model;
+      const scaleFactor = parseFloat(wrapper.dataset.scale || '2');
+      const offsetY = parseFloat(wrapper.dataset.offset || '0');
+
+      if (!modelPath) return;
+
+      // Gebruik clientWidth/Height (negeert de scrollbalk) voor perfecte centrering
+      let width = target.clientWidth;
+      let height = target.clientHeight;
+      const isMobile = window.innerWidth < 768;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0, 0, 0);
+
+      const fov = isMobile ? 60 : 45;
+      const camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 2000);
+      camera.position.set(0, 0, isMobile ? 4.2 : 4);
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(width, height);
+
+      const effect = new AsciiEffect(renderer, '    .:-+*=%@#', {
+        invert: true,
+        resolution: isMobile ? 0.24 : 0.20
+      });
+      effect.setSize(width, height);
+
+      effect.domElement.style.color = '#ffffff';
+      effect.domElement.style.backgroundColor = 'transparent';
+
+      target.appendChild(effect.domElement);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+
+      const light1 = new THREE.PointLight(0xffffff, 3.2, 0, 0);
+      light1.position.set(400, 250, 120);
+      scene.add(light1);
+
+      const light2 = new THREE.PointLight(0xffffff, 0.35, 0, 0);
+      light2.position.set(-400, -150, -250);
+      scene.add(light2);
+
+      const flatMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        specular: 0x050505,
+        shininess: 15,
+        flatShading: true,
+        side: THREE.DoubleSide
+      });
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const loader = new GLTFLoader();
+      loader.load(
+        modelPath,
+        (gltf) => {
+          const mesh = gltf.scene;
+          mesh.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) {
+              (child as THREE.Mesh).material = flatMaterial;
+            }
+          });
+
+          const box = new THREE.Box3().setFromObject(mesh);
+          const size = box.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          mesh.scale.setScalar(scaleFactor / maxDim);
+          mesh.updateMatrixWorld(true);
+
+          const scaledBox = new THREE.Box3().setFromObject(mesh);
+          const center = scaledBox.getCenter(new THREE.Vector3());
+          mesh.position.sub(center);
+          mesh.position.y += offsetY;
+
+          group.add(mesh);
+        },
+        undefined,
+        (err) => console.error(err)
+      );
+
+      let animId: number;
+      const clock = new THREE.Clock();
+
+      function animate() {
+        animId = requestAnimationFrame(animate);
+        const elapsed = clock.getElapsedTime();
+        group.rotation.y = elapsed / 3;
+        effect.render(scene, camera);
+      }
+      animate();
+
+      function handleResize() {
+        width = target.clientWidth;
+        height = target.clientHeight;
+        const mobileNow = window.innerWidth < 768;
+        
+        camera.fov = mobileNow ? 60 : 45;
+        camera.position.z = mobileNow ? 4.2 : 4;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        
+        renderer.setSize(width, height);
+        effect.setSize(width, height);
+      }
+
+      window.addEventListener('resize', handleResize);
+
+      document.addEventListener('astro:before-swap', () => {
+        cancelAnimationFrame(animId);
+        window.removeEventListener('resize', handleResize);
+        renderer.dispose();
+      }, { once: true });
+    });
+  }
+
+  initAsciiScenes();
+  document.addEventListener('astro:page-load', initAsciiScenes);
+</script>

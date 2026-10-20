@@ -47,12 +47,11 @@
 
 body {
   padding: var(--page-gutter);
-  background-color: var(--color-bg);
+  background-color: transparent;
   color: var(--color-text);
   font-family: var(--font-hypsan), system-ui, sans-serif;
   font-size: var(--text-base);
   line-height: var(--leading-normal);
-  -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 

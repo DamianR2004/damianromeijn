@@ -2,8 +2,22 @@
 import { Font } from 'astro:assets';
 import '../styles/global.css';
 import Header from '../components/Header.astro';
+import Ascii from '../components/Ascii.astro';
 
-const { title = 'Damian Romeijn' } = Astro.props;
+interface Props {
+  title?: string;
+  modelPath: string;
+  scaleFactor?: number;
+  offsetY?: number;
+}
+
+const { 
+  title = 'Damian Romeijn', 
+  modelPath, 
+  scaleFactor = 2.0,
+  offsetY = 0
+} = Astro.props;
+
 const lang = Astro.currentLocale || 'nl';
 ---
 
@@ -17,7 +31,13 @@ const lang = Astro.currentLocale || 'nl';
     <title>{title}</title>
   </head>
   <body>
+    <!-- De 3D achtergrond -->
+    <Ascii modelPath={modelPath} scaleFactor={scaleFactor} offsetY={offsetY}/>
+    
+    <!-- De content die de gebruiker ziet -->
     <Header />
-    <slot />
+    <main>
+      <slot />
+    </main>
   </body>
 </html>
